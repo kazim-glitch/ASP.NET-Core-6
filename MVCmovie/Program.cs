@@ -1,6 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MVCmovie.Data;
+using MVCmovie.Models;
+
+
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<MVCmovieContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MVCmovieContext") ?? throw new InvalidOperationException("Connection string 'MVCmovieContext' not found.")));
@@ -9,6 +13,12 @@ builder.Services.AddDbContext<MVCmovieContext>(options =>
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    SeedData.Initialize(services);
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -23,10 +33,30 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
+
+
+app.Use(async (context,next) =>
+{
+    await context.Response.WriteAsync("First middleware");
+    await next.Invoke();
+});
+
+app.Run(async (context) =>
+{
+    await context.Response.WriteAsync("Second Middleware");
+});
+
+
+// app.UseMiddleware();
+
+app.MapRazorPages();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+
 
 app.Run();
